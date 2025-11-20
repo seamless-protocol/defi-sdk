@@ -46,7 +46,7 @@ const LI_FI_METADATA: QuoteSourceMetadata<LiFiSupport> = {
   },
   logoURI: 'ipfs://QmUgcnaNxsgQdjBjytxvXfeSfsDryh9bF4mNaz1Bp5QwJ4',
 };
-type LiFiConfig = { apiKey?: string };
+type LiFiConfig = { apiKey?: string; baseUrl?: string };
 type LiFiSupport = { buyOrders: false; swapAndTransfer: true };
 type LiFiData = { tx: SourceQuoteTransaction };
 export class LiFiQuoteSource extends AlwaysValidConfigAndContextSource<LiFiSupport, LiFiConfig> {
@@ -69,7 +69,7 @@ export class LiFiQuoteSource extends AlwaysValidConfigAndContextSource<LiFiSuppo
     const mappedSellToken = mapNativeToken(sellToken);
     const mappedBuyToken = mapNativeToken(buyToken);
     let url =
-      `https://li.quest/v1/quote` +
+      `${config.baseUrl ??'https://li.quest/v1/quote'}` +
       `?fromChain=${chainId}` +
       `&toChain=${chainId}` +
       `&fromToken=${mappedSellToken}` +

@@ -18,7 +18,7 @@ export type PriceSourceInput =
   | { type: 'codex'; apiKey: string }
   | { type: 'odos' }
   | { type: 'alchemy'; apiKey: string; onChains?: AlchemySupportedChains }
-  | { type: 'coingecko' }
+  | { type: 'coingecko'; baseUrl?: string }
   | { type: 'prioritized'; sources: PriceSourceInput[] }
   | { type: 'fastest'; sources: PriceSourceInput[] }
   | { type: 'aggregate'; sources: PriceSourceInput[]; by: PriceAggregationMethod }
@@ -35,7 +35,7 @@ export function buildPriceService(params: BuildPriceParams | undefined, fetchSer
 }
 
 function buildSource(source: PriceSourceInput | undefined, { fetchService }: { fetchService: IFetchService }): IPriceSource {
-  const coingecko = new CoingeckoPriceSource(fetchService);
+  const coingecko = new CoingeckoPriceSource(fetchService, source?.type === 'coingecko' ? source.baseUrl : undefined);
   const defiLlama = new DefiLlamaPriceSource(fetchService);
   switch (source?.type) {
     case undefined:
