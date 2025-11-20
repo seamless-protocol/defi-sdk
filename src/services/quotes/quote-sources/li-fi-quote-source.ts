@@ -69,7 +69,7 @@ export class LiFiQuoteSource extends AlwaysValidConfigAndContextSource<LiFiSuppo
     const mappedSellToken = mapNativeToken(sellToken);
     const mappedBuyToken = mapNativeToken(buyToken);
     let url =
-      `${config.baseUrl ??'https://li.quest/v1/quote'}` +
+      `${config.baseUrl ?? 'https://li.quest/v1/quote'}` +
       `?fromChain=${chainId}` +
       `&toChain=${chainId}` +
       `&fromToken=${mappedSellToken}` +
