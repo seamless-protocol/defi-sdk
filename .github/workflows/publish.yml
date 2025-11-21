@@ -43,6 +43,11 @@ jobs:
           echo "RELEASE_TAG=latest" >> $GITHUB_ENV
         env:
           RELEASE_TYPE: ${{ github.event.inputs.release-type }}
+      - name: Create release branch
+        run: |
+          RELEASE_BRANCH="release/${NEW_VERSION}"
+          git checkout -b "$RELEASE_BRANCH"
+          echo "RELEASE_BRANCH=$RELEASE_BRANCH" >> $GITHUB_ENV
       - name: Commit report
         run: |
           git commit -am "chore: release ${{ env.NEW_VERSION }}"
@@ -55,4 +60,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git push origin && git push --tags
+          git push origin "${{ env.RELEASE_BRANCH }}"
+          git push origin "refs/tags/${{ env.NEW_VERSION }}"
+      - name: Open release pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh pr view --head "${{ env.RELEASE_BRANCH }}" >/dev/null 2>&1; then
+            echo "Pull request already exists for ${{ env.RELEASE_BRANCH }}"
+          else
+            gh pr create \
+              --base main \
+              --head "${{ env.RELEASE_BRANCH }}" \
+              --title "chore: release ${{ env.NEW_VERSION }}" \
+              --body "Automated release for ${{ env.NEW_VERSION }}."
+          fi
