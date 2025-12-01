@@ -11,7 +11,6 @@ import { BlockResult, IBlocksSource } from '@services/blocks';
 import { ProviderService } from '@services/providers/provider-service';
 import { PublicRPCsProviderSource } from '@services/providers/provider-sources/public-rpcs-provider';
 import { FallbackBlockSource } from '@services/blocks/block-sources/fallback-block-source';
-import { AlchemyBlockSource } from '@services/blocks/block-sources/alchemy-block-source';
 import { AlchemyProviderSource } from '@services/providers/provider-sources/alchemy-provider';
 dotenv.config();
 chai.use(chaiAsPromised);
@@ -37,20 +36,14 @@ const FETCH_SERVICE = new FetchService();
 const DEFI_LLAMA_BLOCKS_SOURCE = new DefiLlamaBlockSource(FETCH_SERVICE, PROVIDER_SERVICE);
 const RPC_BLOCKS_SOURCE = new RPCBlockSource(PROVIDER_SERVICE);
 const FALLBACK_BLOCK_SOURCE = new FallbackBlockSource([RPC_BLOCKS_SOURCE, DEFI_LLAMA_BLOCKS_SOURCE]);
-const ALCHEMY_BLOCK_SOURCE = new AlchemyBlockSource({
-  key: process.env.ALCHEMY_API_KEY!,
-  fetchService: FETCH_SERVICE,
-  providerService: PROVIDER_SERVICE,
-});
 
 jest.retryTimes(2);
 jest.setTimeout(ms('3m'));
 
 describe('Blocks Sources', () => {
-  // blocksSourceTest({ title: 'Defi Llama Source', source: DEFI_LLAMA_BLOCKS_SOURCE }); DefiLlama is not passing tests since they sometimes return a block that is not exactly the closed, but the second closest
+  // blocksSourceTest({ title: 'Defi Llama Source', source: DEFI_LLAMA_BLOCKS_SOURCE }); DefiLlama is not passing tests since they sometimes return a block that is not exactly the closest, but the second closest
   blocksSourceTest({ title: 'RPC Source', source: RPC_BLOCKS_SOURCE });
   blocksSourceTest({ title: 'Fallback Source', source: FALLBACK_BLOCK_SOURCE });
-  blocksSourceTest({ title: 'Alchemy Source', source: ALCHEMY_BLOCK_SOURCE });
 
   function blocksSourceTest({ title, source }: { title: string; source: IBlocksSource }) {
     describe(title, () => {

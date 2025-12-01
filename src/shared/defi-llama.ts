@@ -27,7 +27,6 @@ const CHAIN_ID_TO_KEY: Record<ChainId, Lowercase<string>> = {
   [Chains.VELAS.chainId]: 'velas',
   [Chains.ROOTSTOCK.chainId]: 'rsk',
   [Chains.EVMOS.chainId]: 'evmos',
-  [Chains.CANTO.chainId]: 'canto',
   [Chains.POLYGON_ZKEVM.chainId]: 'polygon_zkevm',
   [Chains.KAVA.chainId]: 'kava',
   [Chains.BASE.chainId]: 'base',

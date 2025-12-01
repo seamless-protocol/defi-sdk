@@ -5,14 +5,12 @@ import { BlocksService } from '@services/blocks/block-service';
 import { IProviderService } from '@services/providers';
 import { RPCBlockSource } from '@services/blocks/block-sources/rpc-block-source';
 import { FallbackBlockSource } from '@services/blocks/block-sources/fallback-block-source';
-import { AlchemyBlockSource } from '@services/blocks/block-sources/alchemy-block-source';
 
 export type BlocksSourceInput =
   | { type: 'custom'; instance: IBlocksSource }
   | { type: 'custom-with-underlying'; underlyingSource: BlocksSourceInput; build: (underlying: IBlocksSource) => IBlocksSource }
   | { type: 'defi-llama' }
   | { type: 'rpc' }
-  | { type: 'alchemy'; apiKey: string }
   | { type: 'fallback'; sources: BlocksSourceInput[] };
 export type BuildBlocksParams = { source: BlocksSourceInput };
 
@@ -35,8 +33,6 @@ function buildSource(
       return new DefiLlamaBlockSource(fetchService, providerService);
     case 'rpc':
       return new RPCBlockSource(providerService);
-    case 'alchemy':
-      return new AlchemyBlockSource({ key: source.apiKey, fetchService, providerService });
     case 'fallback':
       return new FallbackBlockSource(source.sources.map((source) => buildSource(source, { fetchService, providerService })));
     case 'custom':
