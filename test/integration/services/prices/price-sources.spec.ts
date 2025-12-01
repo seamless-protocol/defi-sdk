@@ -40,7 +40,11 @@ const CACHED_PRICE_SOURCE = new CachedPriceSource(DEFI_LLAMA_PRICE_SOURCE, {
 });
 const CODEX_PRICE_SOURCE = new CodexPriceSource(FETCH_SERVICE, process.env.CODEX_API_KEY!);
 const ALCHEMY_PRICE_SOURCE = new AlchemyPriceSource({
-  key: process.env.ALCHEMY_API_KEY!,
+  key:
+    process.env.ALCHEMY_API_KEY ??
+    (() => {
+      throw new Error('ALCHEMY_API_KEY is not set');
+    })(),
   fetch: FETCH_SERVICE,
 });
 const PRIORITIZED_PRICE_SOURCE = new PrioritizedPriceSource([ODOS_PRICE_SOURCE, DEFI_LLAMA_PRICE_SOURCE]);

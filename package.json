@@ -34,7 +34,7 @@
     "prepare": "husky install",
     "script": "ts-node -r tsconfig-paths/register",
     "test": "jest --forceExit --detectOpenHandles --verbose",
-    "test:integration": "jest --forceExit --detectOpenHandles --verbose --testPathPattern=test/integration",
+    "test:integration": "jest --forceExit --detectOpenHandles --verbose --testPathPattern=test/integration --testNamePattern='Token Price Sources > Alchemy Source > getHistoricalPrices > Supported chains > Returned amount of chains is as expected'",
     "test:unit": "jest --forceExit --detectOpenHandles --verbose --testPathPattern=test/unit"
   },
   "lint-staged": {

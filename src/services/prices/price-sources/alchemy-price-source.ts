@@ -3,7 +3,7 @@ import { IFetchService } from '@services/fetch/types';
 import { PriceResult, IPriceSource, PricesQueriesSupport, PriceInput } from '../types';
 import { getChainByKey } from '@chains';
 import { reduceTimeout } from '@shared/timeouts';
-import { filterRejectedResults, groupByChain, isSameAddress } from '@shared/utils';
+import { filterRejectedResults, groupByChain, isSameAddress, timeToSeconds } from '@shared/utils';
 import { Addresses } from '@shared/constants';
 import { ALCHEMY_NETWORKS } from '@shared/alchemy';
 import { alchemySupportedChains, AlchemySupportedChains } from '@services/providers/provider-sources/alchemy-provider';
@@ -28,7 +28,7 @@ export class AlchemyPriceSource implements IPriceSource {
   supportedQueries() {
     const support: PricesQueriesSupport = {
       getCurrentPrices: true,
-      getHistoricalPrices: false,
+      getHistoricalPrices: true,
       getChart: false,
     };
     const entries = Object.entries(ALCHEMY_NETWORKS)
@@ -67,12 +67,17 @@ export class AlchemyPriceSource implements IPriceSource {
     return result;
   }
 
-  getHistoricalPrices(_: {
+  async getHistoricalPrices({
+    tokens,
+    searchWidth,
+    config,
+  }: {
     tokens: { chainId: ChainId; token: TokenAddress; timestamp: Timestamp }[];
     searchWidth: TimeString | undefined;
     config: { timeout?: TimeString } | undefined;
   }): Promise<Record<ChainId, Record<TokenAddress, Record<Timestamp, PriceResult>>>> {
-    return Promise.reject(new Error('Operation not supported'));
+    console.log('getHistoricalPrices', tokens, searchWidth, config);
+    return this.getBulkHistoricalPrices({ tokens, searchWidth, config });
   }
 
   async getChart(_: {
@@ -84,6 +89,87 @@ export class AlchemyPriceSource implements IPriceSource {
     config: { timeout?: TimeString } | undefined;
   }): Promise<Record<ChainId, Record<TokenAddress, PriceResult[]>>> {
     return Promise.reject(new Error('Operation not supported'));
+  }
+
+  private async getBulkHistoricalPrices({
+    tokens,
+    searchWidth,
+    config,
+  }: {
+    tokens: { chainId: ChainId; token: TokenAddress; timestamp: Timestamp }[];
+    searchWidth: TimeString | undefined;
+    config: { timeout?: TimeString } | undefined;
+  }): Promise<Record<ChainId, Record<TokenAddress, Record<Timestamp, PriceResult>>>> {
+    if (tokens.length === 0) {
+      return {};
+    }
+    const range = resolveRangeParameters(searchWidth);
+    console.log('getBulkHistoricalPrices', tokens, range, config);
+    const results = await Promise.all(tokens.map((tokenInput) => this.fetchHistoricalPrice(tokenInput, range, config)));
+    console.log('results', results);
+    const response: Record<ChainId, Record<TokenAddress, Record<Timestamp, PriceResult>>> = {};
+    for (const entry of results) {
+      if (!entry) continue;
+      const { chainId, token, timestamp, price } = entry;
+      if (!response[chainId]) response[chainId] = {};
+      if (!response[chainId][token]) response[chainId][token] = {};
+      response[chainId][token][timestamp] = price;
+    }
+    return response;
+  }
+
+  private async fetchHistoricalPrice(
+    { chainId, token, timestamp }: { chainId: ChainId; token: TokenAddress; timestamp: Timestamp },
+    range: HistoricalRangeOptions,
+    config: { timeout?: TimeString } | undefined
+  ): Promise<HistoricalFetchResult | undefined> {
+    const network = ALCHEMY_NETWORKS[chainId];
+    if (!network?.price.supported) {
+      return;
+    }
+    const normalizedToken = isSameAddress(token, Addresses.NATIVE_TOKEN) ? getChainByKey(chainId)?.wToken ?? Addresses.ZERO_ADDRESS : token;
+    const startTime = Math.max(0, timestamp - range.halfRangeSeconds);
+    let endTime = timestamp + range.halfRangeSeconds;
+    if (endTime - startTime > range.rangeSeconds) {
+      endTime = startTime + range.rangeSeconds;
+    }
+    try {
+      console.log('fetchHistoricalPrice', chainId, token, timestamp, range, config);
+      const response = await this.fetch.fetch(`https://api.g.alchemy.com/prices/v1/${this.apiKey}/tokens/historical`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          network: network.key,
+          address: normalizedToken,
+          startTime,
+          endTime,
+          interval: range.interval,
+        }),
+        timeout: config?.timeout,
+      });
+      console.log('response', response);
+      if (!response.ok) {
+        return;
+      }
+      const body: HistoricalPriceResponse = await response.json();
+      const prices = normalizePrices(body);
+      if (prices.length === 0) {
+        return;
+      }
+      const closest = prices.reduce<NormalizedHistoricalPrice | undefined>((best, current) => {
+        if (!best) return current;
+        return Math.abs(current.timestamp - timestamp) < Math.abs(best.timestamp - timestamp) ? current : best;
+      }, undefined);
+      if (!closest) {
+        return;
+      }
+      if (Math.abs(closest.timestamp - timestamp) > range.toleranceSeconds) {
+        return;
+      }
+      return { chainId, token, timestamp, price: { price: closest.value, closestTimestamp: closest.timestamp } };
+    } catch {
+      return;
+    }
   }
 
   private async getCurrentPricesInChunk(chunk: PriceInput[], timeout?: TimeString) {
@@ -106,7 +192,7 @@ export class AlchemyPriceSource implements IPriceSource {
     if (!response.ok) {
       return [];
     }
-    const body: Response = await response.json();
+    const body: CurrentPricesResponse = await response.json();
     return chunk
       .map(({ chainId, token }, index) => {
         const tokenPrice = body.data[index].prices[0];
@@ -116,6 +202,65 @@ export class AlchemyPriceSource implements IPriceSource {
       })
       .filter((result): result is { chainId: ChainId; token: TokenAddress; price: number; closestTimestamp: Timestamp } => result !== undefined);
   }
+}
+
+const DEFAULT_SEARCH_WIDTH: TimeString = '6h';
+const MIN_TOLERANCE_SECONDS = 60;
+const MIN_RANGE_SECONDS = 600;
+const INTERVAL_RULES = [
+  { interval: '5m', maxRangeSeconds: 7 * 24 * 60 * 60 },
+  { interval: '1h', maxRangeSeconds: 30 * 24 * 60 * 60 },
+  { interval: '1d', maxRangeSeconds: 365 * 24 * 60 * 60 },
+] as const;
+
+type HistoricalRangeOptions = {
+  interval: (typeof INTERVAL_RULES)[number]['interval'];
+  toleranceSeconds: number;
+  halfRangeSeconds: number;
+  rangeSeconds: number;
+};
+
+type HistoricalFetchResult = { chainId: ChainId; token: TokenAddress; timestamp: Timestamp; price: PriceResult };
+type NormalizedHistoricalPrice = { value: number; timestamp: number };
+
+function resolveRangeParameters(searchWidth: TimeString | undefined): HistoricalRangeOptions {
+  const toleranceSeconds = Math.max(timeToSeconds(searchWidth ?? DEFAULT_SEARCH_WIDTH), MIN_TOLERANCE_SECONDS);
+  const desiredRange = Math.max(toleranceSeconds * 2, MIN_RANGE_SECONDS);
+  const intervalRule =
+    INTERVAL_RULES.find(({ maxRangeSeconds }) => desiredRange <= maxRangeSeconds) ?? INTERVAL_RULES[INTERVAL_RULES.length - 1];
+  const rangeSeconds = Math.min(desiredRange, intervalRule.maxRangeSeconds);
+  const halfRangeSeconds = Math.max(1, Math.floor(rangeSeconds / 2));
+  return {
+    interval: intervalRule.interval,
+    toleranceSeconds,
+    halfRangeSeconds,
+    rangeSeconds,
+  };
+}
+
+function normalizePrices(body: HistoricalPriceResponse): NormalizedHistoricalPrice[] {
+  return (body.data?.prices ?? [])
+    .map((price) => {
+      const value = Number(price.value);
+      const timestamp = normalizeTimestamp(price.timestamp);
+      if (!Number.isFinite(value) || timestamp === undefined) {
+        return undefined;
+      }
+      return { value, timestamp };
+    })
+    .filter((price): price is NormalizedHistoricalPrice => price !== undefined);
+}
+
+function normalizeTimestamp(timestamp: string | number | undefined): number | undefined {
+  if (typeof timestamp === 'number') {
+    return timestamp > 1_000_000_000_000 ? Math.floor(timestamp / 1000) : Math.floor(timestamp);
+  }
+  if (typeof timestamp === 'string') {
+    const parsed = Date.parse(timestamp);
+    if (Number.isNaN(parsed)) return undefined;
+    return Math.floor(parsed / 1000);
+  }
+  return undefined;
 }
 
 function generateChunks(tokens: PriceInput[]) {
@@ -142,4 +287,12 @@ function generateChunks(tokens: PriceInput[]) {
   return chunks;
 }
 
-type Response = { data: { address: TokenAddress; prices: { currency: string; value: string; lastUpdatedAt: string }[] }[] };
+type CurrentPricesResponse = {
+  data: { address: TokenAddress; prices: { currency: string; value: string; lastUpdatedAt: string }[] }[];
+};
+
+type HistoricalPriceResponse = {
+  data?: {
+    prices?: { value: string; timestamp: string | number }[];
+  };
+};
