@@ -223,6 +223,7 @@ type HistoricalRangeOptions = {
 type HistoricalFetchResult = { chainId: ChainId; token: TokenAddress; timestamp: Timestamp; price: PriceResult };
 type NormalizedHistoricalPrice = { value: number; timestamp: number };
 
+// TODO: fix range
 function resolveRangeParameters(searchWidth: TimeString | undefined): HistoricalRangeOptions {
   const toleranceSeconds = Math.max(timeToSeconds(searchWidth ?? DEFAULT_SEARCH_WIDTH), MIN_TOLERANCE_SECONDS);
   const desiredRange = Math.max(toleranceSeconds * 2, MIN_RANGE_SECONDS);

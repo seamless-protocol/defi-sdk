@@ -146,7 +146,9 @@ describe('Token Price Sources', () => {
           });
 
           test(`Returned amount of chains is as expected`, () => {
-            expect(Object.keys(result)).to.have.lengthOf(supported.length);
+            console.log('result', Object.keys(result).length);
+            console.log('supported', supported);
+            expect(Object.keys(result).length).to.have.lengthOf(supported.length);
           });
 
           for (const chainId of supported) {
