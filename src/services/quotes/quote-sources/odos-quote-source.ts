@@ -36,7 +36,7 @@ const ODOS_METADATA: QuoteSourceMetadata<OdosSupport> = {
 const BALMY_REFERRAL_CODE = 1533410238;
 type SourcesConfig = { sourceAllowlist?: string[]; sourceDenylist?: undefined } | { sourceAllowlist?: undefined; sourceDenylist?: string[] };
 type OdosSupport = { buyOrders: false; swapAndTransfer: true };
-type OdosConfig = { supportRFQs?: boolean; referralCode?: number } & SourcesConfig;
+type OdosConfig = { supportRFQs?: boolean; referralCode?: number; likeAsset?: boolean } & SourcesConfig;
 type OdosData = { pathId: string; userAddr: Address; recipient: Address };
 export class OdosQuoteSource extends AlwaysValidConfigAndContextSource<OdosSupport, OdosConfig, OdosData> {
   getMetadata() {
@@ -119,6 +119,7 @@ async function getQuote({
     disableRFQs: !config?.supportRFQs, // Disable by default
     referralCode: config?.referralCode ?? BALMY_REFERRAL_CODE, // If not set, we will use Balmy's code
     simple,
+    likeAsset: config?.likeAsset,
   };
 
   const [quoteResponse, routerResponse] = await Promise.all([
