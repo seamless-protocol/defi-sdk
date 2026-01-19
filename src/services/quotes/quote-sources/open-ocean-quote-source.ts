@@ -50,7 +50,7 @@ const OPEN_OCEAN_METADATA: QuoteSourceMetadata<OpenOceanSupport> = {
   logoURI: 'ipfs://QmP7bVENjMmobmjJcPFX6VbFTmj6pKmFNqv7Qkyqui44dT',
 };
 type OpenOceanSupport = { buyOrders: false; swapAndTransfer: true };
-type OpenOceanConfig = { sourceAllowlist?: string[]; apiKey?: string };
+type OpenOceanConfig = { sourceAllowlist?: string[]; sourceDenylist?: string[]; apiKey?: string };
 type OpenOceanData = { tx: SourceQuoteTransaction };
 export class OpenOceanQuoteSource extends AlwaysValidConfigAndContextSource<OpenOceanSupport, OpenOceanConfig, OpenOceanData> {
   getMetadata() {
@@ -85,6 +85,7 @@ export class OpenOceanQuoteSource extends AlwaysValidConfigAndContextSource<Open
       account: recipient ?? takeFrom,
       referrer: config.referrer?.address,
       enabledDexIds: config.sourceAllowlist,
+      disabledDexIds: config.sourceDenylist,
     };
     const queryString = qs.stringify(queryParams, { skipNulls: true, arrayFormat: 'comma' });
     const url = `https://open-api.openocean.finance/v3/${chainKey}/swap_quote?${queryString}`;

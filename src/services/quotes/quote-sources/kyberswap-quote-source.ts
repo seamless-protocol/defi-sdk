@@ -39,7 +39,7 @@ const KYBERSWAP_METADATA: QuoteSourceMetadata<KyberswapSupport> = {
   logoURI: 'ipfs://QmNcTVyqeVtNoyrT546VgJTD4vsZEkWp6zhDJ4qhgKkhbK',
 };
 type KyberswapSupport = { buyOrders: false; swapAndTransfer: true };
-type KyberswapConfig = { excludedSources?: string[] };
+type KyberswapConfig = { sourceDenylist?: string[] };
 type KyberswapData = {
   routeSummary: RouteSummary;
   txValidFor: TimeString | undefined;
@@ -75,8 +75,8 @@ export class KyberswapQuoteSource extends AlwaysValidConfigAndContextSource<Kybe
       `&saveGas=0` +
       `&gasInclude=true`;
 
-    if (config.excludedSources) {
-      url += `&excludedSources=${config.excludedSources.join(',')}`;
+    if (config.sourceDenylist) {
+      url += `&excludedSources=${config.sourceDenylist.join(',')}`;
     }
 
     const routeResponse = await fetchService.fetch(url, { timeout, headers });
