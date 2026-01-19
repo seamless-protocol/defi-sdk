@@ -39,7 +39,7 @@ const KYBERSWAP_METADATA: QuoteSourceMetadata<KyberswapSupport> = {
   logoURI: 'ipfs://QmNcTVyqeVtNoyrT546VgJTD4vsZEkWp6zhDJ4qhgKkhbK',
 };
 type KyberswapSupport = { buyOrders: false; swapAndTransfer: true };
-type KyberswapConfig = {};
+type KyberswapConfig = { excludedSources?: string[] };
 type KyberswapData = {
   routeSummary: RouteSummary;
   txValidFor: TimeString | undefined;
@@ -63,17 +63,21 @@ export class KyberswapQuoteSource extends AlwaysValidConfigAndContextSource<Kybe
       config: { slippagePercentage, timeout, txValidFor },
     },
     config,
-  }: QuoteParams<KyberswapSupport>): Promise<SourceQuoteResponse<KyberswapData>> {
+  }: QuoteParams<KyberswapSupport, KyberswapConfig>): Promise<SourceQuoteResponse<KyberswapData>> {
     const chainKey = SUPPORTED_CHAINS[chainId];
     const headers = config.referrer?.name ? { 'x-client-id': config.referrer?.name } : undefined;
 
-    const url =
+    let url =
       `https://aggregator-api.kyberswap.com/${chainKey}/api/v1/routes` +
       `?tokenIn=${sellToken}` +
       `&tokenOut=${buyToken}` +
       `&amountIn=${order.sellAmount.toString()}` +
       `&saveGas=0` +
       `&gasInclude=true`;
+
+    if (config.excludedSources) {
+      url += `&excludedSources=${config.excludedSources.join(',')}`;
+    }
 
     const routeResponse = await fetchService.fetch(url, { timeout, headers });
     if (!routeResponse.ok) {
