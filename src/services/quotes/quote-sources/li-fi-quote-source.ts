@@ -46,7 +46,8 @@ const LI_FI_METADATA: QuoteSourceMetadata<LiFiSupport> = {
   },
   logoURI: 'ipfs://QmUgcnaNxsgQdjBjytxvXfeSfsDryh9bF4mNaz1Bp5QwJ4',
 };
-type LiFiConfig = { apiKey?: string; baseUrl?: string; sourceDenylist?: string[]; allowBridges?: string };
+type LiFiOrder = 'CHEAPEST' | 'FASTEST';
+type LiFiConfig = { allowBridges?: string; apiKey?: string; baseUrl?: string; order?: LiFiOrder; sourceDenylist?: string[] };
 type LiFiSupport = { buyOrders: false; swapAndTransfer: true };
 type LiFiData = { tx: SourceQuoteTransaction };
 export class LiFiQuoteSource extends AlwaysValidConfigAndContextSource<LiFiSupport, LiFiConfig> {
@@ -81,6 +82,10 @@ export class LiFiQuoteSource extends AlwaysValidConfigAndContextSource<LiFiSuppo
 
     if (config.sourceDenylist) {
       url += `&denyExchanges=${config.sourceDenylist.join(',')}`;
+    }
+
+    if (config.order) {
+      url += `&order=${config.order}`;
     }
 
     if (config.allowBridges) {
