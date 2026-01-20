@@ -80,8 +80,8 @@ export class LiFiQuoteSource extends AlwaysValidConfigAndContextSource<LiFiSuppo
       `&fromAmount=${order.sellAmount.toString()}` +
       `&slippage=${slippagePercentage / 100}`;
 
-    if (config.sourceDenylist) {
-      url += `&denyExchanges=${config.sourceDenylist.join(',')}`;
+    if (config.sourceDenylist && config.sourceDenylist.length > 0) {
+      url += `&denyExchanges=${encodeURIComponent(config.sourceDenylist.join(','))}`;
     }
 
     if (config.order) {
