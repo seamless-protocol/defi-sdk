@@ -110,7 +110,7 @@ export class CoingeckoPriceSource implements IPriceSource {
 
   private async fetchNativePrice(chainId: ChainId, timeout?: TimeString): Promise<PriceResult> {
     const { nativeTokenKey } = COINGECKO_CHAIN_KEYS[chainId];
-    const url = `${this.baseUrl}/api/v3/simple/price?ids=${nativeTokenKey}&vs_currencies=usd&include_last_updated_at=true`;
+    const url = `${this.baseUrl}/simple/price?ids=${nativeTokenKey}&vs_currencies=usd&include_last_updated_at=true`;
     const response = await this.fetch.fetch(url, { timeout, headers: { Accept: 'application/json' } });
     const body = await response.json();
     return { price: body[nativeTokenKey].usd, closestTimestamp: body[nativeTokenKey].last_updated_at };
@@ -119,7 +119,7 @@ export class CoingeckoPriceSource implements IPriceSource {
   private async fetchERC20Prices(chainId: ChainId, addresses: TokenAddress[], timeout?: TimeString): Promise<Record<TokenAddress, PriceResult>> {
     if (addresses.length === 0) return {};
     const url =
-      `${this.baseUrl}/api/v3/simple/token_price/${COINGECKO_CHAIN_KEYS[chainId].chainKey}` +
+      `${this.baseUrl}/simple/token_price/${COINGECKO_CHAIN_KEYS[chainId].chainKey}` +
       `?contract_addresses=${addresses.join(',')}` +
       '&vs_currencies=usd' +
       '&include_last_updated_at=true';
