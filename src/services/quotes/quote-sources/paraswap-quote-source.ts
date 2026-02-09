@@ -26,7 +26,7 @@ const PARASWAP_METADATA: QuoteSourceMetadata<ParaswapSupport> = {
   logoURI: 'ipfs://QmVtj4RwZ5MMfKpbfv8qXksb5WYBJsQXkaZXLq7ipvMNW5',
 };
 type ParaswapSupport = { buyOrders: true; swapAndTransfer: true };
-type ParaswapConfig = { sourceAllowlist?: string[]; sourceDenylist?: string[] };
+type ParaswapConfig = { sourceAllowlist?: string[]; sourceDenylist?: string[]; includeContractMethods?: string[] };
 type ParaswapData = { tx: SourceQuoteTransaction };
 export class ParaswapQuoteSource extends AlwaysValidConfigAndContextSource<ParaswapSupport, ParaswapConfig, ParaswapData> {
   getMetadata(): QuoteSourceMetadata<ParaswapSupport> {
@@ -68,9 +68,10 @@ export class ParaswapQuoteSource extends AlwaysValidConfigAndContextSource<Paras
       partnerFeeBps: 0,
       deadline: calculateDeadline(txValidFor),
       version: '6.2',
+      ...(config.includeContractMethods ? { includeContractMethods: config.includeContractMethods } : {}),
     };
     const queryString = qs.stringify(queryParams, { skipNulls: true, arrayFormat: 'comma' });
-    const url = `https://api.paraswap.io/swap?${queryString}`;
+    const url = `https://api.velora.xyz/swap?${queryString}`;
     const response = await fetchService.fetch(url, { timeout });
     if (!response.ok) {
       failed(PARASWAP_METADATA, chainId, sellToken, buyToken, await response.text());
